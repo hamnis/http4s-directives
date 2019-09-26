@@ -3,7 +3,6 @@ package no.scalabin.http4s.directives
 import cats.effect._
 import cats.implicits._
 import org.http4s._
-import org.http4s.dsl.io._
 import org.http4s.implicits._
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -11,42 +10,44 @@ class DirectiveHttp4sWrapperSpec extends FlatSpec with Matchers {
   it should "respond with a ok response for /foo" in {
     val response = myService.run(Request(method = Method.GET, uri = uri"/foo"))
 
-    check(responseIO = response, expectedHttpCode = Ok, expectedBody = Some("1"))
+    check(responseIO = response, expectedHttpCode = Status.Ok, expectedBody = Some("1"))
   }
   it should "respond with a ok response for /bar" in {
     val response = myService.run(Request(method = Method.GET, uri = uri"/bar"))
 
-    check(responseIO = response, expectedHttpCode = Ok, expectedBody = Some("2"))
+    check(responseIO = response, expectedHttpCode = Status.Ok, expectedBody = Some("2"))
   }
   it should "respond with a ok response for /" in {
     val response = myService.run(Request(method = Method.GET, uri = uri"/"))
 
-    check(responseIO = response, expectedHttpCode = Ok, expectedBody = Some("root"))
+    check(responseIO = response, expectedHttpCode = Status.Ok, expectedBody = Some("root"))
   }
   it should "respond with a ok response for /1" in {
     val response = myService.run(Request(method = Method.GET, uri = uri"/1"))
 
-    check(responseIO = response, expectedHttpCode = Ok, expectedBody = Some("good"))
+    check(responseIO = response, expectedHttpCode = Status.Ok, expectedBody = Some("good"))
   }
   it should "respond with a internal server error response for /0" in {
     val response = myService.run(Request(method = Method.GET, uri = uri"/0"))
 
-    check(responseIO = response, expectedHttpCode = InternalServerError, expectedBody = Some("No zeros!"))
+    check(responseIO = response, expectedHttpCode = Status.InternalServerError, expectedBody = Some("No zeros!"))
   }
   it should "respond with a notFound response for /barfoo" in {
     val response = myService.run(Request(method = Method.GET, uri = uri"/barfoo"))
 
-    check(responseIO = response, expectedHttpCode = NotFound, expectedBody = None)
+    check(responseIO = response, expectedHttpCode = Status.NotFound, expectedBody = None)
   }
 
   private val ops = new DirectiveOps[IO] {}
   import ops._
 
-  private val foobarService =
-    DirectiveRoutes[IO] {
-      case GET -> Root / "foo" => Ok("1").successF
-      case GET -> Root / "bar" => Ok("2").successF
+  private val foobarService = {
+    import org.http4s.dsl.io._
+    Route.directive[IO] {
+      case Root / "foo" => Map(GET -> Ok("1").liftF)
+      case Root / "bar" => Map(GET -> Ok("2").liftF)
     }
+  }
 
   private val numberService = {
     val dsl = new DirectivesDsl[IO] with DirectiveDslOps[IO]

@@ -15,14 +15,14 @@ object Main extends IOApp {
 
     val lm = LocalDateTime.now()
 
-    val service = Route.directive(
-      Root / "hello",
-      Map(GET -> (for {
-        res <- ifModifiedSinceDir(lm, Ok("Hello World"))
-        foo <- request.queryParam("foo")
-        if foo.isDefined or BadRequest("You didn't provide a foo, you fool!")
-      } yield res))
-    ).orNotFound
+    val service = Route.directive {
+      case Root / "hello" =>
+        Map(GET -> (for {
+          res <- ifModifiedSinceDir(lm, Ok("Hello World"))
+          foo <- request.queryParam("foo")
+          if foo.isDefined or BadRequest("You didn't provide a foo, you fool!")
+        } yield res))
+    }.orNotFound
 
     BlazeServerBuilder[IO].bindHttp(8080, "localhost").withHttpApp(service).resource.use(_ => IO.never).as(ExitCode.Success)
   }
